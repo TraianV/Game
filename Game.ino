@@ -86,7 +86,7 @@ int dif;
 unsigned int aim = 3;
 int reading ;
 
-int intshot = 200;
+int intshot = 700;
 int lastshot = 0;
 
 long score = 0;
@@ -95,6 +95,21 @@ unsigned life = 3;
 String msg = "ABC";
 const byte byteMask = 0xFF;
 const int byteLength = 8;
+
+int npcx1;
+int npcx2;
+int npcx3;
+int npcy1;
+int npcy2;
+int npcy3;
+bool alive1 = false;
+bool alive2 = false;
+bool alive3 = false;
+
+unsigned int nrnpc = 0;
+unsigned int tipnpc1;
+unsigned int tipnpc2;
+unsigned int tipnpc3;
 
 void setup() {
   Serial.begin(9600);
@@ -407,23 +422,239 @@ void start()
   lcd.print(life);
   clearLinie(1);
   lcd.print("Score: ");
-  lcd.setCursor(15
-  ,1);
+  lcd.setCursor(15,1);
   lcd.print(score);
 } 
 void Game(){
+  reading = digitalRead(pinSW1);
   //updateByteMatrix();
   if (millis() - lastMoved > moveInterval) {
    // game logic
      updatePositions();
      lastMoved = millis();
    }
-   if (matrixChanged == true) {
+   if(reading != lastButton2State){
+    lastDebounce = millis();
+  }
+  if((millis() - lastDebounce ) > debounceDelay)
+  {
+    if(reading != button2State)
+    {
+      button2State = reading;
+      if(button2State == LOW)
+      {
+        shoot(xPos, yPos, aim);
+      }
+    }
+  }
+  
+  lastButton2State = reading;
+  if(nrnpc == 0)
+  {
+    verifdif();
+  }
+  npcbehave(dif);
+  if (matrixChanged == true) {
     // matrix display logic
      updateMatrix();
      matrixChanged = false;
   }
 }
+
+void npcbehave(int difficulty)
+{
+  long directionNpc1 = random(8);
+  long timelapsed = millis();
+  int interval;
+  if(difficulty == 0)
+  {
+    interval = 3000;
+    if(millis()-timelapsed>interval)
+    {
+      if(xPos ==  npcx1)
+      {
+        if(yPos > npcy1)
+        {
+          npcshoot(npcx1, npcy1, 3);
+        }
+        else if(yPos  < npcy1)
+        {
+          npcshoot(npcx1, npcy1, 7);
+        }
+      }
+      else if(yPos ==  npcy1)
+      {
+        if(xPos > npcx1)
+        {
+        npcshoot(npcx1, npcy1, 5);
+        }
+        else if(xPos  < npcx1)
+        {
+          npcshoot(npcx1, npcy1, 1);
+        }
+      }
+      else
+      { 
+        if(xPos > npcx1 &&  yPos  > npcy1)
+        {
+          npcshoot(npcx1, npcy1, 4);
+        }
+        if(xPos > npcx1 &&  yPos  < npcy1)
+        {
+          npcshoot(npcx1, npcy1, 6);
+        }
+        if(xPos < npcx1 &&  yPos  > npcy1)
+        {
+          npcshoot(npcx1, npcy1, 2);
+        }
+        if(xPos < npcx1 &&  yPos  < npcy1)
+        {
+          npcshoot(npcx1, npcy1, 8);
+        }
+      }
+      npcmove(npcx1,npcy1,directionNpc1);
+    }
+    }
+  else if(difficulty == 1)
+  {
+    ;
+  }
+  else
+  {
+    ;
+  }
+}
+
+void npcmove(int &xnpc, int &ynpc, int npcaim)
+{
+  if(npcaim == 1  &&  xnpc >= 0)
+  {
+    xnpc--;
+  }
+  if(npcaim == 2  &&  xnpc >= 0 &&  ynpc < matrixSize)
+  {
+    xnpc--;
+    ynpc++;
+  }
+  if(npcaim == 3  && ynpc < matrixSize)
+  {
+    ynpc++;
+  }
+  if(npcaim == 4  &&  xnpc  < matrixSize  &&  ynpc  < matrixSize)
+  {
+    xnpc++;
+    ynpc++;
+  }
+  if(npcaim == 5  &&  xnpc  < matrixSize)
+  {
+    xnpc++;
+  }
+  if(npcaim == 6  &&  xnpc  < matrixSize  &&  ynpc  >=  0)
+  {
+    xnpc++;
+    ynpc--;
+  }
+  if(npcaim == 7  &&  ynpc >= 0)
+  {
+    ynpc--;
+  }
+  if(npcaim == 8  &&  xnpc  >= 0  &&  ynpc  >=  0)
+  {
+    xnpc--;
+    ynpc--;
+  }
+}
+void npcshoot(int xnpc, int ynpc, int npcaim)
+{  
+  if(npcaim == 1)
+  {
+    xnpc--;
+  }
+  if(npcaim == 2)
+  {
+    xnpc--;
+    ynpc++;
+  }
+  if(npcaim == 3)
+  {
+    ynpc++;
+  }
+  if(npcaim == 4)
+  {
+    xnpc++;
+    ynpc++;
+  }
+  if(npcaim == 5)
+  {
+    xnpc++;
+  }
+  if(npcaim == 6)
+  {
+    xnpc++;
+    ynpc--;
+  }
+  if(npcaim == 7)
+  {
+    ynpc--;
+  }
+  if(npcaim == 8)
+  {
+    xnpc--;
+    ynpc--;
+  }
+  
+  if(xnpc >= 0 &&  xnpc < matrixSize && ynpc  > 0 &&  ynpc < matrixSize)
+  {
+    matrix[xnpc][ynpc] = 1;
+    updateMatrix();
+  }
+      
+  while(xnpc >= 0 &&  xnpc < matrixSize && ynpc  > 0 &&  ynpc < matrixSize)
+  {    
+    matrix[xnpc][ynpc] = 0;
+    updateMatrix();
+    if(npcaim == 1)
+    {
+      xnpc--;
+    }
+    if(npcaim == 2)
+    {
+      xnpc--;
+      ynpc++;
+    }
+    if(npcaim == 3)
+    {
+      ynpc++;
+    }
+    if(npcaim == 4)
+    {
+      xnpc++;
+      ynpc++;
+    }
+    if(npcaim == 5)
+    {
+      xnpc++;
+    }
+    if(npcaim == 6)
+    {
+      xnpc++;
+      ynpc--;
+    }
+    if(npcaim == 7)
+    {
+      ynpc--;
+    }
+    if(npcaim == 8)
+    {
+      xnpc--;
+      ynpc--;
+    }
+    if(xnpc >= 0 &&  xnpc < matrixSize && ynpc  > 0 &&  ynpc < matrixSize)
+      matrix[xnpc][ynpc] = 1;
+      updateMatrix();
+   }
+}
+
 void generateFood() {
   // lastFoodPos = currentPos;
   // newFoodPos = random(ceva);
@@ -453,8 +684,6 @@ void updatePositions() {
   int xDirec = analogRead(x1Pin);
   int yDirec = analogRead(y1Pin);
 
-  reading = digitalRead(pinSW1);
-  
   xLastPos = xPos;
   yLastPos = yPos;
   
@@ -526,79 +755,168 @@ void updatePositions() {
   if ((xDirec < maxThreshold  &&  xDirec > minThreshold)  &&  yDirec < minThreshold) {
     aim = 3;
   }
-  if(reading != lastButton2State){
-    lastDebounce = millis();
-  }
-  if((millis() - lastDebounce ) > debounceDelay)
-  {
-    if(reading != button2State)
-    {
-      button2State = reading;
-      if(button2State == HIGH)
-      {
-        shoot();
-        Serial. println("da");
-      }
-    }
-  }
-  lastButton2State = reading;
+  
 }
 
-void shoot(){
-  int xst = xPos;
-  int yst = yPos;
-  int caim = aim;
-  int ok = 1;
-  
-  while(ok == 1){
-    if(millis() - lastshot > intshot)
-    {
-      if(caim == 1)
+void shoot(int xst,int yst,int caim){
+   if(caim == 1)
       {
-        yst++;
+        xst--;
       }
       if(caim == 2)
       {
-        xst++;
+        xst--;
         yst++;
       }
       if(caim == 3)
       {
-        xst++;
+        yst++;
       }
       if(caim == 4)
       {
         xst++;
-        yst--;
+        yst++;
       }
       if(caim == 5)
       {
-        yst--;
+        xst++;
       }
       if(caim == 6)
       {
-        xst--;
+        xst++;
         yst--;
       }
       if(caim == 7)
       {
-        xst--;
+        yst--;
       }
       if(caim == 8)
       {
         xst--;
+        yst--;
+      }
+      if(xst >= 0 &&  xst < matrixSize  &&  yst  >=  0 &&  yst < matrixSize)
+      {
+        matrix[xst][yst] = 1;
+        updateMatrix();
+      }
+  while(xst >= 0 &&  xst < matrixSize  && yst  >=  0 &&  yst < matrixSize)
+  {  
+      matrix[xst][yst] = 0;
+      updateMatrix();
+      
+      if(caim == 1)
+      {
+        xst--;
+      }
+      if(caim == 2)
+      {
+        xst--;
         yst++;
       }
-      if(xst == 0 ||  xst == matrixSize - 1  ||  yst  ==  0 ||  yst == matrixSize - 1){
-        ok = 0;
+      if(caim == 3)
+      {
+        yst++;
       }
-      matrix[xst][yst] = 1;
-      lastshot = millis();
-    }
-    matrix[xst][yst] = 0;
+      if(caim == 4)
+      {
+        xst++;
+        yst++;
+      }
+      if(caim == 5)
+      {
+        xst++;
+      }
+      if(caim == 6)
+      {
+        xst++;
+        yst--;
+      }
+      if(caim == 7)
+      {
+        yst--;
+      }
+      if(caim == 8)
+      {
+        xst--;
+        yst--;
+      }
+      if(xst >= 0 &&  xst < matrixSize && yst  >=  0 &&  yst < matrixSize)
+      {
+        matrix[xst][yst] = 1;
+        updateMatrix();
+      }
   }
 }
-
+void verifdif()
+{
+  if(dif==0)
+  {
+    generatenpcez();
+  }
+  else if (dif == 1)
+  {
+    generatenpcmed();
+  }
+  else
+  {
+    generatenpchard();
+  }
+}
+void generatenpcez()
+{
+    nrnpc = 1;
+    tipnpc1 = 1;  
+    
+    npcx1 = matrixSize/2-1;
+    npcy1 = matrixSize-2;
+    alive1 = true;
+    
+    matrix[npcx1][npcy1] = 1;
+    updateMatrix();
+}
+void generatenpcmed()
+{
+    nrnpc = 2;
+    tipnpc1 = 2;
+    tipnpc2 = 2;
+    
+    npcx1 = matrixSize/2-1;
+    npcy1 = matrixSize-2;
+    alive1 = true;
+    
+    npcx2 = matrixSize-1;
+    npcy2 = matrixSize/2;
+    alive2 = true;
+    
+    matrix[npcx1][npcy1] = 1;
+    matrix[npcx2][npcy2] = 1;
+    updateMatrix();
+}
+void generatenpchard()
+{
+    nrnpc = 3;
+    tipnpc1 = 2;
+    tipnpc2 = 2;
+    tipnpc3 = 3;
+    
+    npcx1 = matrixSize/2-1;
+    npcy1 = matrixSize-2;
+    alive1 = true;
+    
+    npcx2 = matrixSize-1;
+    npcy2 = matrixSize/2;
+    alive2 = true;
+    
+    npcx3 = 0;
+    npcy3 = matrixSize/2;
+    alive3 = true;
+    
+    matrix[npcx1][npcy1] = 1;
+    matrix[npcx2][npcy2] = 1;
+    matrix[npcx3][npcy3] = 1;
+    updateMatrix();
+}
 void writeEEPROM(int score) 
 {
   byte firstByte = (score >> byteLength) & byteMask;
