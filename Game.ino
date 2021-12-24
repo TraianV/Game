@@ -1,5 +1,5 @@
-#include "LedControl.h" //  need the library
-#include<LiquidCrystal.h>
+#include <LedControl.h> //  need the library
+#include <LiquidCrystal.h>
 #include <EEPROM.h>
 
 const int dinPin = 12;
@@ -46,7 +46,6 @@ byte yPos = 4;
 byte xLastPos = 4;
 byte yLastPos = 4;
 
-
 const int minThreshold = 300;
 const int maxThreshold = 700;
 
@@ -67,22 +66,10 @@ bool matrix[matrixSize][matrixSize] = {
   {0, 0, 0, 0, 0, 0, 0, 0}  
 };
 
-byte matrixByte[matrixSize] = {
-  B00000000,
-  B01000100,
-  B00101000,
-  B00010000,
-  B00010000,
-  B00010000,
-  B00000000,
-  B00000000
-};
-
-
 bool joyMoved = false;
 int maxObt = 4;
-int stare = 0;
-int dif;
+int state = 0;
+int dif = 1;
 unsigned int aim = 3;
 int reading ;
 
@@ -92,9 +79,8 @@ int lastshot = 0;
 long score = 0;
 unsigned life = 3;
 
-String msg = "ABC";
-const byte byteMask = 0xFF;
-const int byteLength = 8;
+//String msg = "ABC";
+
 
 int npcx1;
 int npcx2;
@@ -106,15 +92,37 @@ bool alive1 = false;
 bool alive2 = false;
 bool alive3 = false;
 
+
+long respawn1;
+long respawn2;
+long respawn3;
+
 unsigned int nrnpc = 0;
 unsigned int tipnpc1;
 unsigned int tipnpc2;
 unsigned int tipnpc3;
 
+int timelapsed1 = 0;
+int timelapsed2 = 0;
+int timelapsed3 = 0;
+
+int interv;
+int multiplayer;
+int respawnTime = 3000;
+int speedProj;
+//int contorMsg = 0;
+
+int highscore1;
+int highscore2;
+int highscore3;
+const byte byteMask = 0xFF;
+const int byteLength = 8;
+unsigned int highscoreIndex = 0;
+
 void setup() {
   Serial.begin(9600);
   
-  pinMode(pinset,OUTPUT);
+  pinMode(pinset, OUTPUT);
   
   pinMode(pinSW1, INPUT_PULLUP);
   
@@ -124,9 +132,13 @@ void setup() {
   lc.clearDisplay(0);// clear screen
   
   matrix[xPos][yPos] = 1;
-
+  
+  highscore1 = readHighscore1EEPROM(); 
+  highscore2 = readHighscore2EEPROM(); 
+  highscore3 = readHighscore3EEPROM(); 
   
   pinMode(pinSW, INPUT_PULLUP);
+  
   // set up the LCD's number of columns and rows:
   lcd.begin(16,2);
   // Print a message to the 
@@ -143,19 +155,16 @@ void setup() {
 }
 
 void loop() {
-  tranzitie();
-  if(stare == 2)
+  transition();
+  Serial.println(indexMenu);
+  if(state == 2)
   {
     Game();
-    if(life == 0)
-    {
-      setName();
-    }
   }
 } 
 
 
-String optiuneMeniu()
+String optionMeniu()
 {
   
   if(indexMenu == 0)
@@ -199,11 +208,11 @@ void toMeniu()
   lcd.clear();
   lcd.print("Meniu");
   lcd.setCursor(0,1);
-  lcd.print(optiuneMeniu());
+  lcd.print(optionMeniu());
 }
 
 
-void tranzitie()
+void transition()
 {
   int xValue = analogRead(xPin);
   int yValue = analogRead(yPin);
@@ -240,8 +249,8 @@ void tranzitie()
 
 
 void moveDown(){
-  if(stare == 0){
-  if(indexMenu >0)
+  if(state == 0){
+    if(indexMenu >0)
     {
       indexMenu--;
     }
@@ -250,10 +259,10 @@ void moveDown(){
       indexMenu = maxObt-1;
     }
     clearLinie(1);
-    lcd.print(optiuneMeniu());
+    lcd.print(optionMeniu());
     }
 
-  if(stare == 1)
+  if(state == 1)
   {
     if(dif >0)
     {
@@ -266,11 +275,38 @@ void moveDown(){
     clearLinie(1);
     lcd.print(dificultate());
   }
+  if(state == -1)
+  {
+    if(dif >0)
+    {
+      highscoreIndex--;
+    }
+    else
+    {
+      highscoreIndex = 2;
+    }
+    clearLinie(1);
+    showScore();
+  }
+  /*else if(state == 4)
+  {
+    if(msg[IndexMsg] > 'B')
+    {
+      msg[contorMsg]--;
+    }
+    else
+    {
+      msg[contorMsg] = 'Z';
+    }
+    lcd.setCursor(0,1);
+    lcd.print(msg);
+  }
+  */
 }
 
 
 void moveUp(){
-  if(stare == 0){ 
+  if(state == 0){ 
     if(indexMenu < maxObt-1) 
     {
       indexMenu++;
@@ -280,11 +316,11 @@ void moveUp(){
       indexMenu = 0;
     }
     clearLinie(1);
-    lcd.print(optiuneMeniu());
+    lcd.print(optionMeniu());
    }
 
    
-  if(stare == 1)
+  else if(state == 1)
   {
     if(dif < 3) 
     {
@@ -297,42 +333,75 @@ void moveUp(){
     clearLinie(1);
     lcd.print(dificultate());
   }
+  else if(state == -1)
+  {
+    if(dif < 3) 
+    {
+      highscoreIndex++;
+    }
+    else
+    {
+      highscoreIndex = 0;
+    }
+    clearLinie(1);
+    showScore();
+  }
+  /*else if(state == 4)
+  {
+    if(msg[contorMsg] < 'Z')
+    {
+      msg[contorMsg]++;
+    }
+    else
+    {
+      msg[contorMsg] = 'A';
+    }
+    lcd.setCursor(0,1);
+    lcd.print(msg);
+  }
+  */
 }
 
 
 void moveRight(){
-  if(stare == 0){
+  if(state == 0){
     if(indexMenu == 0)
     {
-      stare = 1;
-      stare1();
+      state = 2;
+      start();
     }
     if(indexMenu == 1)
     {
-      stare = -1;
-      stare_1();
+      state = -1;
+      state_1();
     }
     if(indexMenu == 2)
     {
-      stare = -2;
-      stare_2();
+      state = 1;
+      state1();
     }
     if(indexMenu == 3)
     {
-      stare_3();
+      state_3();
     }
   }
-  else
-    if(stare == 1)
+  else if(state == 1)
     {
-      stare = 2;
+      state = 2;
       start();  
     }
+  /*else if(state == 4)
+  {
+    contorMsg++;
+    if(contorMsg  > 2)
+    {
+      savehighscore();
+    }
+  }
+  */
 }
-void stare_2(){
-  notYeti();
-}
-void stare_3(){
+
+void state_3(){
   clearLinie(0);
   lcd.print("Created by");
   clearLinie(1);
@@ -340,34 +409,39 @@ void stare_3(){
 }
 
 void moveLeft(){
-  if(stare  ==  0)
+  if(state  ==  0)
   {
     toMeniu();
   }
-  if(stare == 1)
+  else if(state == 1)
   {
-    stare = 0;
+    state = 0;
     toMeniu();
   }
-  if(stare == -1)
+  else if(state == -1)
   {
-    stare = 0;
+    state = 0;
+    indexMenu = 1;;
     toMeniu();
   }
-  if(stare == -2)
+  else if(state == -2)
   {
-    stare = 0;
+    state = 0;
     toMeniu();
   }
-  if(stare == -3)
+  else if(state == -3)
   {
-    stare = 0;
+    state = 0;
     toMeniu();
   }
+  /*else if(state == 4  && contorMsg > 0)
+  {
+    contorMsg--;
+  }
+  */
 }
 
-
-void stare1(){
+void state1(){
   clearLinie(0);
   lcd.print("Dificulty?");
   dif = 1;
@@ -391,14 +465,27 @@ String dificultate()
       }
   }
 }
-void notYeti()
+
+void showScore()
 {
-  clearLinie(0);
-  lcd.print("PLEASE WAIT");
-  clearLinie(1);
-  lcd.print("In DEVELOPMENT");
+  if(highscoreIndex == 0)
+  {
+    lcd.print("1: ");
+    lcd.print(highscore1);
+  }
+  else if(highscoreIndex == 1)
+  {
+    lcd.print("2: ");
+    lcd.print(highscore2);
+  }
+  else
+  {
+    lcd.print("3: ");
+    lcd.print(highscore3);
+  }
 }
-void stare_1()
+
+void state_1()
 {
   theBest();
 }
@@ -407,10 +494,12 @@ void theBest()
   clearLinie(0);
   lcd.print("THE BEST SCORES");
   clearLinie(1);
-  lcd.print("NO SCORES YET");
+  showScore();
 }
 void start()
 {
+  life = 3;
+  score = 0;
   clearLinie(0);
   lcd.print("THE GAME");
   clearLinie(1);
@@ -422,7 +511,7 @@ void start()
   lcd.print(life);
   clearLinie(1);
   lcd.print("Score: ");
-  lcd.setCursor(15,1);
+  lcd.setCursor(7,1);
   lcd.print(score);
 } 
 void Game(){
@@ -449,225 +538,21 @@ void Game(){
   }
   
   lastButton2State = reading;
-  if(nrnpc == 0)
-  {
-    verifdif();
-  }
-  npcbehave(dif);
   if (matrixChanged == true) {
     // matrix display logic
      updateMatrix();
      matrixChanged = false;
   }
-}
-
-void npcbehave(int difficulty)
-{
-  long directionNpc1 = random(8);
-  long timelapsed = millis();
-  int interval;
-  if(difficulty == 0)
+  if(nrnpc == 0)
   {
-    interval = 3000;
-    if(millis()-timelapsed>interval)
-    {
-      if(xPos ==  npcx1)
-      {
-        if(yPos > npcy1)
-        {
-          npcshoot(npcx1, npcy1, 3);
-        }
-        else if(yPos  < npcy1)
-        {
-          npcshoot(npcx1, npcy1, 7);
-        }
-      }
-      else if(yPos ==  npcy1)
-      {
-        if(xPos > npcx1)
-        {
-        npcshoot(npcx1, npcy1, 5);
-        }
-        else if(xPos  < npcx1)
-        {
-          npcshoot(npcx1, npcy1, 1);
-        }
-      }
-      else
-      { 
-        if(xPos > npcx1 &&  yPos  > npcy1)
-        {
-          npcshoot(npcx1, npcy1, 4);
-        }
-        if(xPos > npcx1 &&  yPos  < npcy1)
-        {
-          npcshoot(npcx1, npcy1, 6);
-        }
-        if(xPos < npcx1 &&  yPos  > npcy1)
-        {
-          npcshoot(npcx1, npcy1, 2);
-        }
-        if(xPos < npcx1 &&  yPos  < npcy1)
-        {
-          npcshoot(npcx1, npcy1, 8);
-        }
-      }
-      npcmove(npcx1,npcy1,directionNpc1);
-    }
-    }
-  else if(difficulty == 1)
-  {
-    ;
+    verifdif();
   }
   else
   {
-    ;
+    npcbehave();
   }
 }
 
-void npcmove(int &xnpc, int &ynpc, int npcaim)
-{
-  if(npcaim == 1  &&  xnpc >= 0)
-  {
-    xnpc--;
-  }
-  if(npcaim == 2  &&  xnpc >= 0 &&  ynpc < matrixSize)
-  {
-    xnpc--;
-    ynpc++;
-  }
-  if(npcaim == 3  && ynpc < matrixSize)
-  {
-    ynpc++;
-  }
-  if(npcaim == 4  &&  xnpc  < matrixSize  &&  ynpc  < matrixSize)
-  {
-    xnpc++;
-    ynpc++;
-  }
-  if(npcaim == 5  &&  xnpc  < matrixSize)
-  {
-    xnpc++;
-  }
-  if(npcaim == 6  &&  xnpc  < matrixSize  &&  ynpc  >=  0)
-  {
-    xnpc++;
-    ynpc--;
-  }
-  if(npcaim == 7  &&  ynpc >= 0)
-  {
-    ynpc--;
-  }
-  if(npcaim == 8  &&  xnpc  >= 0  &&  ynpc  >=  0)
-  {
-    xnpc--;
-    ynpc--;
-  }
-}
-void npcshoot(int xnpc, int ynpc, int npcaim)
-{  
-  if(npcaim == 1)
-  {
-    xnpc--;
-  }
-  if(npcaim == 2)
-  {
-    xnpc--;
-    ynpc++;
-  }
-  if(npcaim == 3)
-  {
-    ynpc++;
-  }
-  if(npcaim == 4)
-  {
-    xnpc++;
-    ynpc++;
-  }
-  if(npcaim == 5)
-  {
-    xnpc++;
-  }
-  if(npcaim == 6)
-  {
-    xnpc++;
-    ynpc--;
-  }
-  if(npcaim == 7)
-  {
-    ynpc--;
-  }
-  if(npcaim == 8)
-  {
-    xnpc--;
-    ynpc--;
-  }
-  
-  if(xnpc >= 0 &&  xnpc < matrixSize && ynpc  > 0 &&  ynpc < matrixSize)
-  {
-    matrix[xnpc][ynpc] = 1;
-    updateMatrix();
-  }
-      
-  while(xnpc >= 0 &&  xnpc < matrixSize && ynpc  > 0 &&  ynpc < matrixSize)
-  {    
-    matrix[xnpc][ynpc] = 0;
-    updateMatrix();
-    if(npcaim == 1)
-    {
-      xnpc--;
-    }
-    if(npcaim == 2)
-    {
-      xnpc--;
-      ynpc++;
-    }
-    if(npcaim == 3)
-    {
-      ynpc++;
-    }
-    if(npcaim == 4)
-    {
-      xnpc++;
-      ynpc++;
-    }
-    if(npcaim == 5)
-    {
-      xnpc++;
-    }
-    if(npcaim == 6)
-    {
-      xnpc++;
-      ynpc--;
-    }
-    if(npcaim == 7)
-    {
-      ynpc--;
-    }
-    if(npcaim == 8)
-    {
-      xnpc--;
-      ynpc--;
-    }
-    if(xnpc >= 0 &&  xnpc < matrixSize && ynpc  > 0 &&  ynpc < matrixSize)
-      matrix[xnpc][ynpc] = 1;
-      updateMatrix();
-   }
-}
-
-void generateFood() {
-  // lastFoodPos = currentPos;
-  // newFoodPos = random(ceva);
-  // matrix[lastFoodPos] = 0;
-  // matrix[newFoodPos] = 1;
-  matrixChanged = true;
-}
-
-void updateByteMatrix() {
-  for (int row = 0; row < matrixSize; row++) {
-    lc.setRow(0, row, matrixByte[row]);
-  }
-}
 
 void updateMatrix() {
   for (int row = 0; row < matrixSize; row++) {
@@ -799,6 +684,30 @@ void shoot(int xst,int yst,int caim){
       {
         matrix[xst][yst] = 1;
         updateMatrix();
+        if(xst  ==  npcx1  &&  yst ==  npcy1  &&  alive1 == true)
+        {
+            score = score + (100 * multiplayer);
+            respawn1 = millis();
+            alive1 = false;
+            matrix[npcx1][npcy1] = 0;
+            updateMatrix();
+        }
+        if(xst  ==  npcx2  &&  yst ==  npcy2  &&  alive2 == true)
+        {
+            score = score + (100 * multiplayer);
+            respawn2 = millis();
+            alive2 = false;
+            matrix[npcx2][npcy2] = 0;
+            updateMatrix();
+        }
+        if(xst  ==  npcx3  &&  yst ==  npcy3  &&  alive3 == true)
+        {
+            score = score + (100 * multiplayer);
+            respawn3 = millis();
+            alive3 = false;
+            matrix[npcx3][npcy3] = 0;
+            updateMatrix();
+        }
       }
   while(xst >= 0 &&  xst < matrixSize  && yst  >=  0 &&  yst < matrixSize)
   {  
@@ -846,8 +755,39 @@ void shoot(int xst,int yst,int caim){
         matrix[xst][yst] = 1;
         updateMatrix();
       }
-  }
+      if(xst  ==  npcx1  &&  yst ==  npcy1  &&  alive1 == true)
+      {
+        score += (100 * multiplayer);
+        lcd.setCursor(7,1);
+        lcd.print(score);
+        respawn1 = millis();
+        alive1 = false;
+        matrix[npcx1][npcy1] = 0;
+        updateMatrix();
+      }
+      if(xst  ==  npcx2  &&  yst ==  npcy2  &&  alive2 == true)
+      {
+        score += (100 * multiplayer);
+        lcd.setCursor(7,1);
+        lcd.print(score);
+        respawn2 = millis();
+        alive2 = false;
+        matrix[npcx2][npcy2] = 0;
+        updateMatrix();
+      }
+      if(xst  ==  npcx3  &&  yst ==  npcy3  &&  alive3 == true)
+      {
+        score += (100 * multiplayer);
+        lcd.setCursor(7,1);
+        lcd.print(score);
+        respawn3 = millis();
+        alive3 = false;
+        matrix[npcx3][npcy3] = 0;
+        updateMatrix();
+      }
+   }
 }
+
 void verifdif()
 {
   if(dif==0)
@@ -867,9 +807,12 @@ void generatenpcez()
 {
     nrnpc = 1;
     tipnpc1 = 1;  
+    interv = 3000;
+    multiplayer = 1;
+    speedProj = 200;
     
     npcx1 = matrixSize/2-1;
-    npcy1 = matrixSize-2;
+    npcy1 = matrixSize-1;
     alive1 = true;
     
     matrix[npcx1][npcy1] = 1;
@@ -880,9 +823,12 @@ void generatenpcmed()
     nrnpc = 2;
     tipnpc1 = 2;
     tipnpc2 = 2;
+    interv = 2000;
+    multiplayer = 2;
+    speedProj = 100;
     
     npcx1 = matrixSize/2-1;
-    npcy1 = matrixSize-2;
+    npcy1 = matrixSize-1;
     alive1 = true;
     
     npcx2 = matrixSize-1;
@@ -899,17 +845,20 @@ void generatenpchard()
     tipnpc1 = 2;
     tipnpc2 = 2;
     tipnpc3 = 3;
+    interv = 1500;
+    multiplayer = 3;
+    speedProj = 75;
     
     npcx1 = matrixSize/2-1;
-    npcy1 = matrixSize-2;
+    npcy1 = matrixSize-1;
     alive1 = true;
     
     npcx2 = matrixSize-1;
-    npcy2 = matrixSize/2;
+    npcy2 = matrixSize/2 - 1;
     alive2 = true;
     
     npcx3 = 0;
-    npcy3 = matrixSize/2;
+    npcy3 = matrixSize/2 - 1;
     alive3 = true;
     
     matrix[npcx1][npcy1] = 1;
@@ -917,7 +866,479 @@ void generatenpchard()
     matrix[npcx3][npcy3] = 1;
     updateMatrix();
 }
-void writeEEPROM(int score) 
+void npcbehave()
+{
+  if(dif == 0)
+  {
+    timelapsed1 = millis();
+    npctip1();
+  }
+  else if(dif == 1)
+  {
+    npctip2(npcx1,npcy1,timelapsed1,alive1,respawn1);
+    npctip2(npcx2,npcy2,timelapsed2,alive2,respawn2);
+  }
+  else
+  {
+    npctip2(npcx1,npcy1,timelapsed1,alive1,respawn1);
+    npctip2(npcx2,npcy2,timelapsed2,alive2,respawn2);
+    npctip3(npcx3,npcy3,timelapsed3,alive3,respawn3);
+  }
+}
+void npctip1()
+{
+  
+  long directionNpc1 = random(9);
+  if(millis()-timelapsed1>interv  &&  alive1 == true)
+  {
+    if(xPos ==  npcx1)
+    {
+      if(yPos > npcy1)
+      {
+        npcshoot(npcx1, npcy1, 3);
+      }
+      else if(yPos  < npcy1)
+      {
+        npcshoot(npcx1, npcy1, 7);
+      }
+    }
+    else if(yPos ==  npcy1)
+    {
+      if(xPos > npcx1)
+      {
+        npcshoot(npcx1, npcy1, 5);
+      }
+      else if(xPos  < npcx1)
+      {
+        npcshoot(npcx1, npcy1, 1);
+      }
+    }
+    else
+    { 
+      if(xPos > npcx1 &&  yPos  > npcy1)
+      {
+        npcshoot(npcx1, npcy1, 4);
+      }
+      if(xPos > npcx1 &&  yPos  < npcy1)
+      {
+        npcshoot(npcx1, npcy1, 6);
+      }
+      if(xPos < npcx1 &&  yPos  > npcy1)
+      {
+        npcshoot(npcx1, npcy1, 2);
+      }
+      if(xPos < npcx1 &&  yPos  < npcy1)
+      {
+        npcshoot(npcx1, npcy1, 8);
+      }
+    }
+    timelapsed1 = millis();
+    npcmove(npcx1,npcy1,directionNpc1);
+  }
+  else if(alive1 == false)
+  {
+    if(millis()-respawn1 > respawnTime  )
+    {
+      alive1 = true;
+      npcx1= matrixSize/2 - 1;
+      npcy1 = matrixSize-1;
+      matrix[npcx1][npcy1] = 1;
+      updateMatrix();
+    }
+  }
+}
+void npctip2(int &xnpc, int &ynpc,int &timelapsed, bool &alive, long &respawn)
+{
+  unsigned randnr = random(9);
+  if(millis()-timelapsed>interv &&  alive == true)
+    {
+      if(xPos ==  xnpc)
+      {
+        if(yPos > ynpc)
+        {
+          npcshoot(xnpc, ynpc, 3);
+        }
+        else if(yPos  < npcy1)
+        {
+          npcshoot(xnpc, ynpc, 7);
+        }
+      }
+      else if(yPos ==  ynpc)
+      {
+        if(xPos > xnpc)
+        {
+        npcshoot(xnpc, ynpc, 5);
+        }
+        else if(xPos  < xnpc)
+        {
+          npcshoot(xnpc, ynpc, 1);
+        }
+      }
+      else  if(xPos + yPos ==  xnpc + ynpc  ||  yPos - xPos == ynpc - xnpc)
+      { 
+        if(xPos > xnpc &&  yPos  > ynpc &&  xPos + yPos ==  xnpc + ynpc)
+        {
+          npcshoot(xnpc, ynpc, 4);
+        }
+        if(xPos > xnpc &&  yPos  < ynpc &&  xPos + yPos ==  xnpc + ynpc)
+        {
+          npcshoot(xnpc, ynpc, 6);
+        }
+        if(xPos < xnpc &&  yPos  > ynpc &&  yPos - xPos == ynpc - xnpc)
+        {
+          npcshoot(xnpc, ynpc, 2);
+        }
+        if(xPos < xnpc &&  yPos  < ynpc &&  yPos - xPos == ynpc - xnpc)
+        {
+          npcshoot(xnpc, ynpc, 8);
+        }
+      }
+      else
+      {
+        if(ynpc - 1 ==  yPos)
+        {
+            npcmove(xnpc, ynpc, 7);
+        }
+        else if(ynpc + 1 ==  yPos)
+        {
+          npcmove(xnpc, ynpc, 3);
+        }
+        else if(xnpc + 1 ==  xPos)
+        {
+          npcmove(xnpc, ynpc, 5);
+        }
+        else if(xnpc - 1 ==  xPos)
+        {
+          npcmove(xnpc, ynpc, 1);
+        }
+        else if(xPos + yPos ==  xnpc + 1 + ynpc){
+          npcmove(xnpc, ynpc, 3);
+        }
+        else if(xPos + yPos ==  xnpc - 1 + ynpc){
+          npcmove(xnpc, ynpc, 7);
+        }
+        else if(yPos - xPos == ynpc - xnpc + 1){
+          npcmove(xnpc, ynpc, 5);
+        }
+        else if(yPos - xPos == ynpc - xnpc - 1){
+          npcmove(xnpc, ynpc, 1);
+        }
+        else
+        {
+          npcmove(xnpc, ynpc, randnr);
+        }
+      }
+      timelapsed = millis();
+    }
+    else if(alive == false)
+    {
+      if(millis()-respawn > respawnTime)
+      {
+        alive = true;
+        matrix[xnpc][ynpc] = 1;
+        updateMatrix();
+      }
+  }
+}
+void npctip3(int &xnpc, int &ynpc,int &timelapsed, bool &alive, long &respawn)
+{
+  unsigned randnr = random(9);
+  if(millis()-timelapsed>interv)
+    {
+      if(xPos ==  xnpc)
+      {
+        if(yPos > ynpc)
+        {
+          npcshoot(xnpc, ynpc, 3);
+          npcmove(xnpc, ynpc, 3);
+        }
+        else if(yPos  < npcy1)
+        {
+          npcshoot(xnpc, ynpc, 7);
+          npcmove(xnpc, ynpc, 7);
+        }
+      }
+      else if(yPos ==  ynpc)
+      {
+        if(xPos > xnpc)
+        {
+        npcshoot(xnpc, ynpc, 5);
+        npcmove(xnpc, ynpc, 5);
+        }
+        else if(xPos  < xnpc)
+        {
+          npcshoot(xnpc, ynpc, 1);
+          npcmove(xnpc, ynpc, 1);
+        }
+      }
+      else  if(xPos + yPos ==  xnpc + ynpc  ||  yPos - xPos == ynpc - xnpc)
+      { 
+        if(xPos > xnpc &&  yPos  > ynpc &&  xPos + yPos ==  xnpc + ynpc)
+        {
+          npcshoot(xnpc, ynpc, 4);
+          npcmove(xnpc, ynpc, 4);
+        }
+        if(xPos > xnpc &&  yPos  < ynpc &&  xPos + yPos ==  xnpc + ynpc)
+        {
+          npcshoot(xnpc, ynpc, 6);
+          npcmove(xnpc, ynpc, 6);
+        }
+        if(xPos < xnpc &&  yPos  > ynpc &&  yPos - xPos == ynpc - xnpc)
+        {
+          npcshoot(xnpc, ynpc, 2);
+          npcmove(xnpc, ynpc, 2);
+        }
+        if(xPos < xnpc &&  yPos  < ynpc &&  yPos - xPos == ynpc - xnpc)
+        {
+          npcshoot(xnpc, ynpc, 8);
+          npcmove(xnpc, ynpc, 8);
+        }
+      }
+      else
+      {
+        if(ynpc - 1 ==  yPos)
+        {
+            npcmove(xnpc, ynpc, 7);
+        }
+        else if(ynpc + 1 ==  yPos)
+        {
+          npcmove(xnpc, ynpc, 3);
+        }
+        else if(xnpc + 1 ==  xPos)
+        {
+          npcmove(xnpc, ynpc, 5);
+        }
+        else if(xnpc - 1 ==  xPos)
+        {
+          npcmove(xnpc, ynpc, 1);
+        }
+        else if(xPos + yPos ==  xnpc + 1 + ynpc){
+          npcmove(xnpc, ynpc, 3);
+        }
+        else if(xPos + yPos ==  xnpc - 1 + ynpc){
+          npcmove(xnpc, ynpc, 7);
+        }
+        else if(yPos - xPos == ynpc - xnpc + 1){
+          npcmove(xnpc, ynpc, 5);
+        }
+        else if(yPos - xPos == ynpc - xnpc - 1){
+          npcmove(xnpc, ynpc, 1);
+        }
+        else
+        {
+          npcmove(xnpc, ynpc, randnr);
+        }
+      }
+      timelapsed = millis();
+    }
+    else if(alive == false)
+    {
+      if(millis()-respawn > respawnTime)
+      {
+        alive = true;
+        matrix[xnpc][ynpc] = 1;
+        updateMatrix();
+      }
+  }
+}
+void npcmove(int &xnpc, int &ynpc, int npcaim)
+{
+  if(npcaim !=  0 ||  (xnpc != xPos &&  ynpc  != yPos))
+  {
+    matrix[xnpc][ynpc] = 0;
+  }
+  if(npcaim == 1  &&  xnpc >= 0)
+  {
+    xnpc--;
+  }
+  if(npcaim == 2  &&  xnpc > 0 &&  ynpc < matrixSize - 1)
+  {
+    xnpc--;
+    ynpc++;
+  }
+  if(npcaim == 3  && ynpc < matrixSize - 1 )
+  {
+    ynpc++;
+  }
+  if(npcaim == 4  &&  xnpc  < matrixSize - 1  &&  ynpc  < matrixSize - 1)
+  {
+    xnpc++;
+    ynpc++;
+  }
+  if(npcaim == 5  &&  xnpc  < matrixSize - 1)
+  {
+    xnpc++;
+  }
+  if(npcaim == 6  &&  xnpc  < matrixSize - 1  &&  ynpc  >  0)
+  {
+    xnpc++;
+    ynpc--;
+  }
+  if(npcaim == 7  &&  ynpc > 0)
+  {
+    ynpc--;
+  }
+  if(npcaim == 8  &&  xnpc  > 0  &&  ynpc  >  0)
+  {
+    xnpc--;
+    ynpc--;
+  }
+  if(npcaim !=  0)
+  {
+    matrix[xnpc][ynpc] = 1;
+    updateMatrix();
+  }
+}
+void npcshoot(int xnpc, int ynpc, int npcaim)
+{ 
+  int delayer = millis();
+  if(npcaim == 1)
+  {
+    xnpc--;
+  }
+  if(npcaim == 2)
+  {
+    xnpc--;
+    ynpc++;
+  }
+  if(npcaim == 3)
+  {
+    ynpc++;
+  }
+  if(npcaim == 4)
+  {
+    xnpc++;
+    ynpc++;
+  }
+  if(npcaim == 5)
+  {
+    xnpc++;
+  }
+  if(npcaim == 6)
+  {
+    xnpc++;
+    ynpc--;
+  }
+  if(npcaim == 7)
+  {
+    ynpc--;
+  }
+  if(npcaim == 8)
+  {
+    xnpc--;
+    ynpc--;
+  }
+  updatePositions();
+  if(xnpc >= 0 &&  xnpc < matrixSize && ynpc  > 0 &&  ynpc < matrixSize)
+  {
+    matrix[xnpc][ynpc] = 1;
+    updateMatrix();
+  }
+  
+  if(xnpc == xPos  &&  ynpc == yPos)
+  {
+    life--;
+    lcd.setCursor(7,0);
+    lcd.print(life);
+    if(life == 0)
+    {
+      //setName();
+      saveHighscore();
+    }
+  }
+  while(millis() - delayer < speedProj)
+  {
+    ;
+  }
+  delayer = millis();
+  
+  while(xnpc >= 0 &&  xnpc < matrixSize && ynpc  > 0 &&  ynpc < matrixSize)
+  {    
+    matrix[xnpc][ynpc] = 0;
+    updateMatrix();
+    if(npcaim == 1)
+    {
+      xnpc--;
+    }
+    if(npcaim == 2)
+    {
+      xnpc--;
+      ynpc++;
+    }
+    if(npcaim == 3)
+    {
+      ynpc++;
+    }
+    if(npcaim == 4)
+    {
+      xnpc++;
+      ynpc++;
+    }
+    if(npcaim == 5)
+    {
+      xnpc++;
+    }
+    if(npcaim == 6)
+    {
+      xnpc++;
+      ynpc--;
+    }
+    if(npcaim == 7)
+    {
+      ynpc--;
+    }
+    if(npcaim == 8)
+    {
+      xnpc--;
+      ynpc--;
+    }
+    updatePositions();
+    if(xnpc >= 0 &&  xnpc < matrixSize && ynpc  > 0 &&  ynpc < matrixSize)
+    {
+      matrix[xnpc][ynpc] = 1;
+      updateMatrix();
+    }
+   
+    if(xnpc == xPos  &&  ynpc == yPos)
+    {
+      life--;
+      lcd.setCursor(7,0);
+      lcd.print(life);
+      if(life == 0)
+        {
+          //setName();
+          saveHighscore();
+        }
+      
+    }
+  while(millis() - delayer < speedProj)
+  {
+    ;
+  }
+  delayer = millis();
+  }
+}
+
+/*void setName(){
+  clearLinie(0);
+  state = 4;
+  lcd.print("Your Name:");
+  clearLinie(1);
+  lcd.print(msg);
+}
+*/
+
+void writeHighscore1NameEEPROM(char name[]) 
+{
+  byte firstByte = name[0] & byteMask;
+  byte secondByte = name[1] & byteMask;
+  byte thirdByte = name[2] & byteMask;
+  EEPROM.update(2, firstByte);
+  EEPROM.update(3, secondByte);
+  EEPROM.update(4, thirdByte);
+}
+
+void writeHighscore1EEPROM(int score) 
 {
   byte firstByte = (score >> byteLength) & byteMask;
   byte secondByte = score & byteMask;
@@ -925,16 +1346,87 @@ void writeEEPROM(int score)
   EEPROM.update(1, secondByte);
 }
 
-int readEEPROM() 
+void writeHighscore2EEPROM(int score) 
+{
+  byte firstByte = (score >> byteLength) & byteMask;
+  byte secondByte = score & byteMask;
+  EEPROM.update(5, firstByte);
+  EEPROM.update(6, secondByte);
+}
+
+void writeHighscore3EEPROM(int score) 
+{
+  byte firstByte = (score >> byteLength) & byteMask;
+  byte secondByte = score & byteMask;
+  EEPROM.update(10, firstByte);
+  EEPROM.update(11, secondByte);
+}
+
+int readHighscore1NameEEPROM() 
+{
+  byte firstByte = EEPROM.read(2);
+  byte secondByte = EEPROM.read(3);
+  byte thirdByte = EEPROM.read(4);
+  return ((firstByte << byteLength) << byteLength) + (secondByte << byteLength) + thirdByte;
+}
+
+int readHighscore1EEPROM() 
 {
   byte firstByte = EEPROM.read(0);
   byte secondByte = EEPROM.read(1);
   return (firstByte << byteLength) + secondByte;
 }
 
-void setName(){
-  clearLinie(0);
-      lcd.print("Your Name:");
-      clearLinie(1);
-      lcd.print(msg);
+int readHighscore2EEPROM() 
+{
+  byte firstByte = EEPROM.read(5);
+  byte secondByte = EEPROM.read(6);
+  return (firstByte << byteLength) + secondByte;
+}
+
+int readHighscore3EEPROM() 
+{
+  byte firstByte = EEPROM.read(10);
+  byte secondByte = EEPROM.read(11);
+  return (firstByte << byteLength) + secondByte;
+}
+void saveHighscore()
+{
+  state = 0;
+  toMeniu();
+  updateScore();
+}
+void updateScore()
+{
+  if (score > highscore1)
+  {
+    highscore3 = highscore2;
+    highscore2 = highscore1;
+    highscore1 = score;
+    writeHighscore1EEPROM(highscore1);
+    writeHighscore2EEPROM(highscore2);
+    writeHighscore3EEPROM(highscore3);
+  }
+  else if (score > highscore2)
+  {
+    highscore3 = highscore2;
+    highscore2 = score;
+    writeHighscore2EEPROM(highscore2);
+    writeHighscore3EEPROM(highscore3);
+  }
+  else if (score > highscore3)
+  {
+    
+    highscore3 = score;
+    writeHighscore3EEPROM(highscore3);
+  }  
+}
+void emptyMatrix()
+{
+  for (int row = 0; row < matrixSize; row++) {
+    for (int col = 0; col < matrixSize; col++) {
+      matrix[row][col] = 0;
+    }
+  }
+  updateMatrix();
 }
