@@ -21,3 +21,5 @@ I made a geme for my introduction to robotics course. It is some sort of space i
 - Added EEPROM functions to save and read the highest 3 highscores
 - Added score
 - Added in setings a way to change difficulty
+
+![video](https://drive.google.com/file/d/1rJ1BT4tT7xgvr6wYmGdsOAhquIQ7ZSsF/view?usp=sharing)
