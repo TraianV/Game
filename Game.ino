@@ -146,8 +146,8 @@ void setup() {
   lcd.setCursor(0,1);
   lcd.print("Visan Traian");
   delay(1000);
-  clearLinie(0);
-  clearLinie(1);
+  clearLine(0);
+  clearLine(1);
   lcd.setCursor(0,0);
   lcd.print("Meniu");
   lcd.setCursor(0,1);
@@ -195,7 +195,7 @@ String optionMeniu()
 }
 
 
-void clearLinie(int i)
+void clearLine(int i)
 {
   lcd.setCursor(0,i);
   lcd.print("                ");
@@ -205,9 +205,9 @@ void clearLinie(int i)
 
 void toMeniu()
 {
-  lcd.clear();
+  clearLine(0);
   lcd.print("Meniu");
-  lcd.setCursor(0,1);
+  clearLine(1);
   lcd.print(optionMeniu());
 }
 
@@ -258,7 +258,7 @@ void moveDown(){
     {
       indexMenu = maxObt-1;
     }
-    clearLinie(1);
+    clearLine(1);
     lcd.print(optionMeniu());
     }
 
@@ -272,7 +272,7 @@ void moveDown(){
     {
       dif = 2;
     }
-    clearLinie(1);
+    clearLine(1);
     lcd.print(dificultate());
   }
   if(state == -1)
@@ -285,7 +285,7 @@ void moveDown(){
     {
       highscoreIndex = 2;
     }
-    clearLinie(1);
+    clearLine(1);
     showScore();
   }
   /*else if(state == 4)
@@ -315,7 +315,7 @@ void moveUp(){
     {
       indexMenu = 0;
     }
-    clearLinie(1);
+    clearLine(1);
     lcd.print(optionMeniu());
    }
 
@@ -330,7 +330,7 @@ void moveUp(){
     {
       dif = 0;
     }
-    clearLinie(1);
+    clearLine(1);
     lcd.print(dificultate());
   }
   else if(state == -1)
@@ -343,7 +343,7 @@ void moveUp(){
     {
       highscoreIndex = 0;
     }
-    clearLinie(1);
+    clearLine(1);
     showScore();
   }
   /*else if(state == 4)
@@ -402,9 +402,9 @@ void moveRight(){
 }
 
 void state_3(){
-  clearLinie(0);
+  clearLine(0);
   lcd.print("Created by");
-  clearLinie(1);
+  clearLine(1);
   lcd.print("Visan Traian");
 }
 
@@ -442,10 +442,10 @@ void moveLeft(){
 }
 
 void state1(){
-  clearLinie(0);
+  clearLine(0);
   lcd.print("Dificulty?");
   dif = 1;
-  clearLinie(1);
+  clearLine(1);
   lcd.print(dificultate());
 }
 
@@ -491,25 +491,25 @@ void state_1()
 }
 void theBest()
 {
-  clearLinie(0);
+  clearLine(0);
   lcd.print("THE BEST SCORES");
-  clearLinie(1);
+  clearLine(1);
   showScore();
 }
 void start()
 {
   life = 3;
   score = 0;
-  clearLinie(0);
+  clearLine(0);
   lcd.print("THE GAME");
-  clearLinie(1);
+  clearLine(1);
   lcd.print("IS LOADING");
   delay(1500);
-  clearLinie(0);
+  clearLine(0);
   lcd.print("Lives: ");
   lcd.setCursor(7,0);
   lcd.print(life);
-  clearLinie(1);
+  clearLine(1);
   lcd.print("Score: ");
   lcd.setCursor(7,1);
   lcd.print(score);
@@ -1320,10 +1320,10 @@ void npcshoot(int xnpc, int ynpc, int npcaim)
 }
 
 /*void setName(){
-  clearLinie(0);
+  clearLine(0);
   state = 4;
   lcd.print("Your Name:");
-  clearLinie(1);
+  clearLine(1);
   lcd.print(msg);
 }
 */
@@ -1393,8 +1393,9 @@ int readHighscore3EEPROM()
 void saveHighscore()
 {
   state = 0;
-  toMeniu();
   updateScore();
+  emptyMatrix();
+  toMeniu();
 }
 void updateScore()
 {
