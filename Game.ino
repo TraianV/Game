@@ -79,8 +79,6 @@ int lastshot = 0;
 long score = 0;
 unsigned life = 3;
 
-//String msg = "ABC";
-
 
 int npcx1;
 int npcx2;
@@ -119,8 +117,8 @@ const byte byteMask = 0xFF;
 const int byteLength = 8;
 unsigned int highscoreIndex = 0;
 
-void setup() {
-  Serial.begin(9600);
+void setup() {                  // in setup I tried to show a mesage saying that I made the game
+  Serial.begin(9600);           //the same message that it is shown in about section in main menu
   
   pinMode(pinset, OUTPUT);
   
@@ -131,7 +129,7 @@ void setup() {
   lc.setIntensity(0, matrixBrightness); // sets brightness (0~15 possible values)
   lc.clearDisplay(0);// clear screen
   
-  matrix[xPos][yPos] = 1;
+  matrix[xPos][yPos] = 1; 
   
   highscore1 = readHighscore1EEPROM(); 
   highscore2 = readHighscore2EEPROM(); 
@@ -155,7 +153,13 @@ void setup() {
 }
 
 void loop() {
-  transition();
+  transition();     //the menu is stuctured kind of like a tree
+                    // the states are:
+                    //                  0 = main menu
+                    //                  1 = select difficulty
+                    //                  2 is the main game 
+                    //                  -1 is the page where the highest scores are shown
+                    //                  -3 is about page
   Serial.println(indexMenu);
   if(state == 2)
   {
@@ -164,7 +168,7 @@ void loop() {
 } 
 
 
-String optionMeniu()
+String optionMeniu()  //main menu
 {
   
   if(indexMenu == 0)
@@ -195,7 +199,7 @@ String optionMeniu()
 }
 
 
-void clearLine(int i)
+void clearLine(int i) // I needed something to erase any line in lcd
 {
   lcd.setCursor(0,i);
   lcd.print("                ");
@@ -212,7 +216,7 @@ void toMeniu()
 }
 
 
-void transition()
+void transition()   // this functions reads the input on the first joystick for the menu
 {
   int xValue = analogRead(xPin);
   int yValue = analogRead(yPin);
@@ -247,6 +251,7 @@ void transition()
   }
 }
 
+// the next 4 functions are used to move through the menu 
 
 void moveDown(){
   if(state == 0){
@@ -288,20 +293,7 @@ void moveDown(){
     clearLine(1);
     showScore();
   }
-  /*else if(state == 4)
-  {
-    if(msg[IndexMsg] > 'B')
-    {
-      msg[contorMsg]--;
-    }
-    else
-    {
-      msg[contorMsg] = 'Z';
-    }
-    lcd.setCursor(0,1);
-    lcd.print(msg);
-  }
-  */
+ 
 }
 
 
@@ -346,20 +338,6 @@ void moveUp(){
     clearLine(1);
     showScore();
   }
-  /*else if(state == 4)
-  {
-    if(msg[contorMsg] < 'Z')
-    {
-      msg[contorMsg]++;
-    }
-    else
-    {
-      msg[contorMsg] = 'A';
-    }
-    lcd.setCursor(0,1);
-    lcd.print(msg);
-  }
-  */
 }
 
 
@@ -390,23 +368,9 @@ void moveRight(){
       state = 2;
       start();  
     }
-  /*else if(state == 4)
-  {
-    contorMsg++;
-    if(contorMsg  > 2)
-    {
-      savehighscore();
-    }
-  }
-  */
 }
 
-void state_3(){
-  clearLine(0);
-  lcd.print("Created by");
-  clearLine(1);
-  lcd.print("Visan Traian");
-}
+
 
 void moveLeft(){
   if(state  ==  0)
@@ -434,11 +398,13 @@ void moveLeft(){
     state = 0;
     toMeniu();
   }
-  /*else if(state == 4  && contorMsg > 0)
-  {
-    contorMsg--;
-  }
-  */
+}
+
+void state_3(){
+  clearLine(0);
+  lcd.print("Created by");
+  clearLine(1);
+  lcd.print("Visan Traian");
 }
 
 void state1(){
@@ -485,7 +451,7 @@ void showScore()
   }
 }
 
-void state_1()
+void state_1()  // the highsccore page
 {
   theBest();
 }
@@ -496,7 +462,7 @@ void theBest()
   clearLine(1);
   showScore();
 }
-void start()
+void start()    //this is where the matrix game stats
 {
   life = 3;
   score = 0;
@@ -508,8 +474,8 @@ void start()
   clearLine(0);
   lcd.print("Lives: ");
   lcd.setCursor(7,0);
-  lcd.print(life);
-  clearLine(1);
+  lcd.print(life);                //the game gives you 3 lives whithout any means to rise that number so the game wouldn't take long
+  clearLine(1);                   // the lives remaining and the score will be shown on lcd
   lcd.print("Score: ");
   lcd.setCursor(7,1);
   lcd.print(score);
@@ -532,8 +498,8 @@ void Game(){
       button2State = reading;
       if(button2State == LOW)
       {
-        shoot(xPos, yPos, aim);
-      }
+        shoot(xPos, yPos, aim);   //presing on the second joystick will make the player shoot a projectile in the direction 
+      }                           //last picked with the secont joysick
     }
   }
   
@@ -549,7 +515,7 @@ void Game(){
   }
   else
   {
-    npcbehave();
+    npcbehave();      // if there are no npcs initialise game else coninue
   }
 }
 
@@ -562,11 +528,22 @@ void updateMatrix() {
   }
 }
 
+void emptyMatrix()  
+{
+  for (int row = 0; row < matrixSize; row++) {
+    for (int col = 0; col < matrixSize; col++) {
+      matrix[row][col] = 0;
+    }
+  }
+  updateMatrix();
+}
+
+
 void updatePositions() {
-  int xValue = analogRead(xPin);
+  int xValue = analogRead(xPin);      //moveing
   int yValue = analogRead(yPin);
 
-  int xDirec = analogRead(x1Pin);
+  int xDirec = analogRead(x1Pin);     //iming
   int yDirec = analogRead(y1Pin);
 
   xLastPos = xPos;
@@ -614,7 +591,7 @@ void updatePositions() {
     matrix[xLastPos][yLastPos] = 0;
     matrix[xPos][yPos] = 1;
   }
-
+  // there are 8 posibilities to shoot : up, up-right, right, down-right, down, down-left, left and up-left
   if (xDirec < minThreshold &&  yDirec > maxThreshold) {
     aim = 8;
   }
@@ -643,8 +620,8 @@ void updatePositions() {
   
 }
 
-void shoot(int xst,int yst,int caim){
-   if(caim == 1)
+void shoot(int xst,int yst,int caim){ // the when the button is pressed a projectile is spawned then travels until it gets out of matrix
+   if(caim == 1)                      // it won't stop if it reaches a npc so it would be possible to shoot more at he same time
       {
         xst--;
       }
@@ -755,12 +732,12 @@ void shoot(int xst,int yst,int caim){
         matrix[xst][yst] = 1;
         updateMatrix();
       }
-      if(xst  ==  npcx1  &&  yst ==  npcy1  &&  alive1 == true)
+      if(xst  ==  npcx1  &&  yst ==  npcy1  &&  alive1 == true) // this is where the score is calculated
       {
-        score += (100 * multiplayer);
-        lcd.setCursor(7,1);
-        lcd.print(score);
-        respawn1 = millis();
+        score += (100 * multiplayer);                           //evey NPC destroyed adds 100 points multiplyed by dificulty
+        lcd.setCursor(7,1);                                     //easy won't muliply the server
+        lcd.print(score);                                       //medium will multiply it by 2
+        respawn1 = millis();                                    //and hard by 3
         alive1 = false;
         matrix[npcx1][npcy1] = 0;
         updateMatrix();
@@ -788,7 +765,7 @@ void shoot(int xst,int yst,int caim){
    }
 }
 
-void verifdif()
+void verifdif()         //this will generate the NPCs
 {
   if(dif==0)
   {
@@ -803,13 +780,13 @@ void verifdif()
     generatenpchard();
   }
 }
-void generatenpcez()
+void generatenpcez()  // on easy it will be spawned one NPC which shoot in the direction the player is at and movese randomly
 {
     nrnpc = 1;
     tipnpc1 = 1;  
     interv = 3000;
     multiplayer = 1;
-    speedProj = 200;
+    speedProj = 200;  // the speed of NPC's projectile is also slower than the others
     
     npcx1 = matrixSize/2-1;
     npcy1 = matrixSize-1;
@@ -818,12 +795,12 @@ void generatenpcez()
     matrix[npcx1][npcy1] = 1;
     updateMatrix();
 }
-void generatenpcmed()
+void generatenpcmed() // on medium 2 NPCs will spawn whith will save their ability to shoot until the player is in line with the NPC
 {
     nrnpc = 2;
     tipnpc1 = 2;
     tipnpc2 = 2;
-    interv = 2000;
+    interv = 2000;  // they also respawn and attack faster
     multiplayer = 2;
     speedProj = 100;
     
@@ -839,7 +816,7 @@ void generatenpcmed()
     matrix[npcx2][npcy2] = 1;
     updateMatrix();
 }
-void generatenpchard()
+void generatenpchard()  // finally 3 NPCs will spawn, 2 like in medium and another that tries to follow the player
 {
     nrnpc = 3;
     tipnpc1 = 2;
@@ -1141,7 +1118,7 @@ void npctip3(int &xnpc, int &ynpc,int &timelapsed, bool &alive, long &respawn)
       }
   }
 }
-void npcmove(int &xnpc, int &ynpc, int npcaim)
+void npcmove(int &xnpc, int &ynpc, int npcaim)  //the NPCs will try shoot first and then move or try to align with the player
 {
   if(npcaim !=  0 ||  (xnpc != xPos &&  ynpc  != yPos))
   {
@@ -1318,26 +1295,7 @@ void npcshoot(int xnpc, int ynpc, int npcaim)
   delayer = millis();
   }
 }
-
-/*void setName(){
-  clearLine(0);
-  state = 4;
-  lcd.print("Your Name:");
-  clearLine(1);
-  lcd.print(msg);
-}
-*/
-
-void writeHighscore1NameEEPROM(char name[]) 
-{
-  byte firstByte = name[0] & byteMask;
-  byte secondByte = name[1] & byteMask;
-  byte thirdByte = name[2] & byteMask;
-  EEPROM.update(2, firstByte);
-  EEPROM.update(3, secondByte);
-  EEPROM.update(4, thirdByte);
-}
-
+// the next functions will update the highscores on or read them from EEPROM
 void writeHighscore1EEPROM(int score) 
 {
   byte firstByte = (score >> byteLength) & byteMask;
@@ -1362,14 +1320,6 @@ void writeHighscore3EEPROM(int score)
   EEPROM.update(11, secondByte);
 }
 
-int readHighscore1NameEEPROM() 
-{
-  byte firstByte = EEPROM.read(2);
-  byte secondByte = EEPROM.read(3);
-  byte thirdByte = EEPROM.read(4);
-  return ((firstByte << byteLength) << byteLength) + (secondByte << byteLength) + thirdByte;
-}
-
 int readHighscore1EEPROM() 
 {
   byte firstByte = EEPROM.read(0);
@@ -1390,7 +1340,7 @@ int readHighscore3EEPROM()
   byte secondByte = EEPROM.read(11);
   return (firstByte << byteLength) + secondByte;
 }
-void saveHighscore()
+void saveHighscore()  // when the player runs out of lives the highscore will be compared and if it is in top 3, it will be stored
 {
   state = 0;
   updateScore();
@@ -1421,13 +1371,4 @@ void updateScore()
     highscore3 = score;
     writeHighscore3EEPROM(highscore3);
   }  
-}
-void emptyMatrix()
-{
-  for (int row = 0; row < matrixSize; row++) {
-    for (int col = 0; col < matrixSize; col++) {
-      matrix[row][col] = 0;
-    }
-  }
-  updateMatrix();
 }
